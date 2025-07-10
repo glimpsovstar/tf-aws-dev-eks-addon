@@ -43,25 +43,26 @@ output "letsencrypt_cluster_issuer_staging" {
 
 output "cluster_issuers_instructions" {
   description = "Instructions for creating ClusterIssuers manually"
-  value = var.install_cert_manager && var.letsencrypt_email != "" ? <<-EOT
-    
-    To create the Let's Encrypt ClusterIssuers, run these commands:
-    
-    1. Configure kubectl:
-       aws eks update-kubeconfig --region ${var.aws_region} --name ${data.terraform_remote_state.eks_foundation.outputs.eks_cluster_name}
-    
-    2. Verify cert-manager is running:
-       kubectl get pods -n cert-manager
-    
-    3. Apply the ClusterIssuers:
-       kubectl apply -f cluster-issuers.yaml
-    
-    4. Verify ClusterIssuers are created:
-       kubectl get clusterissuers
-    
-    The cluster-issuers.yaml file has been generated in your current directory.
-    
-  EOT : "cert-manager not installed"
+  value = var.install_cert_manager && var.letsencrypt_email != "" ? <<EOT
+
+To create the Let's Encrypt ClusterIssuers, run these commands:
+
+1. Configure kubectl:
+   aws eks update-kubeconfig --region ${var.aws_region} --name ${data.terraform_remote_state.eks_foundation.outputs.eks_cluster_name}
+
+2. Verify cert-manager is running:
+   kubectl get pods -n cert-manager
+
+3. Apply the ClusterIssuers:
+   kubectl apply -f cluster-issuers.yaml
+
+4. Verify ClusterIssuers are created:
+   kubectl get clusterissuers
+
+The cluster-issuers.yaml file has been generated in your current directory.
+
+EOT
+ : "cert-manager not installed"
 }
 
 # Information from foundation workspace
