@@ -44,7 +44,6 @@ output "letsencrypt_cluster_issuer_staging" {
 output "cluster_issuers_instructions" {
   description = "Instructions for creating ClusterIssuers manually"
   value = var.install_cert_manager && var.letsencrypt_email != "" ? <<EOT
-
 To create the Let's Encrypt ClusterIssuers, run these commands:
 
 1. Configure kubectl:
@@ -60,9 +59,8 @@ To create the Let's Encrypt ClusterIssuers, run these commands:
    kubectl get clusterissuers
 
 The cluster-issuers.yaml file has been generated in your current directory.
-
-EOT
- : "cert-manager not installed"
+EOT 
+: "cert-manager not installed"
 }
 
 # Information from foundation workspace
