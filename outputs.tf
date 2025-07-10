@@ -59,7 +59,7 @@ To create the Let's Encrypt ClusterIssuers, run these commands:
    kubectl get clusterissuers
 
 The cluster-issuers.yaml file has been generated in your current directory.
-EOT 
+EOT
 : "cert-manager not installed"
 }
 
