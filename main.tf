@@ -18,12 +18,13 @@ resource "helm_release" "nginx_ingress" {
   version          = "4.8.3"
   namespace        = "ingress-nginx"
   create_namespace = true
-  timeout          = 900
-  wait             = true
+  timeout          = 1200  # Increased to 20 minutes
+  wait             = true   # Changed to true to wait for completion
+  wait_for_jobs    = true
 
   set {
     name  = "controller.service.type"
-    value = "LoadBalancer"
+    value = "LoadBalancer"  # Changed back to LoadBalancer
   }
 
   set {
@@ -67,7 +68,20 @@ resource "helm_release" "nginx_ingress" {
     name  = "controller.resources.requests.memory"
     value = "90Mi"
   }
+
+  # Add replica count for faster deployment
+  set {
+    name  = "controller.replicaCount"
+    value = "2"
+  }
+
+  # Add node selector to ensure scheduling
+  set {
+    name  = "controller.nodeSelector.kubernetes\\.io/os"
+    value = "linux"
+  }
 }
+
 
 # Wait for NGINX Ingress to be ready
 resource "time_sleep" "wait_for_nginx" {
