@@ -76,50 +76,7 @@ resource "time_sleep" "wait_for_nginx" {
   create_duration = "120s"
 }
 
-# Install cert-manager CRDs first (separate release)
-resource "helm_release" "cert_manager_crds" {
-  count            = var.install_cert_manager ? 1 : 0
-  name             = "cert-manager-crds"
-  repository       = "https://charts.jetstack.io"
-  chart            = "cert-manager"
-  version          = "v1.13.2"
-  namespace        = "cert-manager"
-  create_namespace = true
-  timeout          = 600
-  wait             = true
-
-  # Only install CRDs, disable other components
-  set {
-    name  = "installCRDs"
-    value = "true"
-  }
-  
-  set {
-    name  = "webhook.enabled"
-    value = "false"
-  }
-
-  set {
-    name  = "cainjector.enabled"
-    value = "false"
-  }
-
-  set {
-    name  = "controller.enabled"
-    value = "false"
-  }
-
-  depends_on = [time_sleep.wait_for_nginx]
-}
-
-# Wait for CRDs to be installed
-resource "time_sleep" "wait_for_crds" {
-  count           = var.install_cert_manager ? 1 : 0
-  depends_on      = [helm_release.cert_manager_crds]
-  create_duration = "60s"
-}
-
-# Install cert-manager main components
+# Install cert-manager (simplified approach)
 resource "helm_release" "cert_manager" {
   count            = var.install_cert_manager ? 1 : 0
   name             = "cert-manager"
@@ -127,14 +84,14 @@ resource "helm_release" "cert_manager" {
   chart            = "cert-manager"
   version          = "v1.13.2"
   namespace        = "cert-manager"
-  create_namespace = false  # Already created by CRDs release
+  create_namespace = true
   timeout          = 600
   wait             = true
   wait_for_jobs    = true
 
   set {
     name  = "installCRDs"
-    value = "false"  # CRDs already installed
+    value = "true"
   }
 
   set {
@@ -142,82 +99,23 @@ resource "helm_release" "cert_manager" {
     value = "--enable-certificate-owner-ref=true"
   }
 
-  depends_on = [time_sleep.wait_for_crds]
+  depends_on = [time_sleep.wait_for_nginx]
 }
 
 # Wait for cert-manager to be fully ready
 resource "time_sleep" "wait_for_cert_manager" {
   count           = var.install_cert_manager ? 1 : 0
   depends_on      = [helm_release.cert_manager]
-  create_duration = "120s"  # Increased wait time
+  create_duration = "120s"
 }
 
-# Production Let's Encrypt ClusterIssuer
-resource "kubernetes_manifest" "letsencrypt_prod" {
-  count = var.install_cert_manager && var.letsencrypt_email != "" ? 1 : 0
+# Output instructions for manual ClusterIssuer creation
+resource "local_file" "cluster_issuers_yaml" {
+  count    = var.install_cert_manager && var.letsencrypt_email != "" ? 1 : 0
+  filename = "cluster-issuers.yaml"
+  content = templatefile("${path.module}/cluster-issuers.yaml.tpl", {
+    letsencrypt_email = var.letsencrypt_email
+  })
 
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "ClusterIssuer"
-    metadata = {
-      name = "letsencrypt-prod"
-    }
-    spec = {
-      acme = {
-        email  = var.letsencrypt_email
-        server = "https://acme-v02.api.letsencrypt.org/directory"
-        privateKeySecretRef = {
-          name = "letsencrypt-prod"
-        }
-        solvers = [{
-          http01 = {
-            ingress = {
-              class = "nginx"
-            }
-          }
-        }]
-      }
-    }
-  }
-
-  depends_on = [
-    time_sleep.wait_for_cert_manager,
-    helm_release.cert_manager_crds,
-    helm_release.cert_manager
-  ]
-}
-
-# Staging Let's Encrypt ClusterIssuer
-resource "kubernetes_manifest" "letsencrypt_staging" {
-  count = var.install_cert_manager && var.letsencrypt_email != "" ? 1 : 0
-
-  manifest = {
-    apiVersion = "cert-manager.io/v1"
-    kind       = "ClusterIssuer"
-    metadata = {
-      name = "letsencrypt-staging"
-    }
-    spec = {
-      acme = {
-        email  = var.letsencrypt_email
-        server = "https://acme-staging-v02.api.letsencrypt.org/directory"
-        privateKeySecretRef = {
-          name = "letsencrypt-staging"
-        }
-        solvers = [{
-          http01 = {
-            ingress = {
-              class = "nginx"
-            }
-          }
-        }]
-      }
-    }
-  }
-
-  depends_on = [
-    time_sleep.wait_for_cert_manager,
-    helm_release.cert_manager_crds,
-    helm_release.cert_manager
-  ]
+  depends_on = [time_sleep.wait_for_cert_manager]
 }
