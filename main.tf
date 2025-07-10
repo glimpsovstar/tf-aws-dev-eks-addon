@@ -108,14 +108,3 @@ resource "time_sleep" "wait_for_cert_manager" {
   depends_on      = [helm_release.cert_manager]
   create_duration = "120s"
 }
-
-# Output instructions for manual ClusterIssuer creation
-resource "local_file" "cluster_issuers_yaml" {
-  count    = var.install_cert_manager && var.letsencrypt_email != "" ? 1 : 0
-  filename = "cluster-issuers.yaml"
-  content = templatefile("${path.module}/cluster-issuers.yaml.tpl", {
-    letsencrypt_email = var.letsencrypt_email
-  })
-
-  depends_on = [time_sleep.wait_for_cert_manager]
-}
