@@ -122,3 +122,36 @@ resource "time_sleep" "wait_for_cert_manager" {
   depends_on      = [helm_release.cert_manager]
   create_duration = "120s"
 }
+
+# Create DNS records pointing to LoadBalancer
+# This workspace CAN reference LoadBalancer since it creates it
+resource "aws_route53_record" "app_records" {
+  for_each = var.app_dns_records
+  
+  zone_id = data.terraform_remote_state.eks_foundation.outputs.route53_zone_id
+  name    = each.key
+  type    = "CNAME"
+  ttl     = 300
+  records = [data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname]
+
+  depends_on = [
+    helm_release.nginx_ingress,
+    data.kubernetes_service.nginx_ingress_controller
+  ]
+}
+
+# Create wildcard DNS record (optional)
+resource "aws_route53_record" "wildcard" {
+  count = var.create_wildcard_dns && var.wildcard_domain != "" ? 1 : 0
+  
+  zone_id = data.terraform_remote_state.eks_foundation.outputs.route53_zone_id
+  name    = var.wildcard_domain
+  type    = "CNAME"
+  ttl     = 300
+  records = [data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname]
+
+  depends_on = [
+    helm_release.nginx_ingress,
+    data.kubernetes_service.nginx_ingress_controller
+  ]
+}

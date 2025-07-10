@@ -56,3 +56,14 @@ output "eks_cluster_endpoint" {
   description = "EKS cluster endpoint from foundation"
   value       = data.terraform_remote_state.eks_foundation.outputs.eks_cluster_endpoint
 }
+
+# DNS outputs
+output "dns_records_created" {
+  description = "DNS records created pointing to LoadBalancer"
+  value       = var.app_dns_records
+}
+
+output "wildcard_dns_created" {
+  description = "Wildcard DNS record created"
+  value       = var.create_wildcard_dns ? var.wildcard_domain : null
+}

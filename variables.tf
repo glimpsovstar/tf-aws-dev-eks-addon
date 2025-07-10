@@ -23,8 +23,22 @@ variable "install_cert_manager" {
   default     = true
 }
 
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
+# DNS Configuration for LoadBalancer-dependent records
+variable "app_dns_records" {
+  description = "DNS records to create pointing to LoadBalancer"
+  type        = set(string)
+  default     = []
+  # Example: ["vault.yourdomain.com", "api.yourdomain.com"]
+}
+
+variable "create_wildcard_dns" {
+  description = "Whether to create wildcard DNS record"
+  type        = bool
+  default     = false
+}
+
+variable "wildcard_domain" {
+  description = "Wildcard domain to create (e.g., '*.yourdomain.com')"
   type        = string
-  default     = "dev"
+  default     = ""
 }
