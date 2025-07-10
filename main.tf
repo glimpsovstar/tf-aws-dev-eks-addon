@@ -76,10 +76,10 @@ resource "time_sleep" "wait_for_nginx" {
   create_duration = "120s"
 }
 
-# Install cert-manager
-resource "helm_release" "cert_manager" {
+# Install cert-manager CRDs first (separate release)
+resource "helm_release" "cert_manager_crds" {
   count            = var.install_cert_manager ? 1 : 0
-  name             = "cert-manager"
+  name             = "cert-manager-crds"
   repository       = "https://charts.jetstack.io"
   chart            = "cert-manager"
   version          = "v1.13.2"
@@ -87,11 +87,54 @@ resource "helm_release" "cert_manager" {
   create_namespace = true
   timeout          = 600
   wait             = true
+
+  # Only install CRDs, disable other components
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
+  
+  set {
+    name  = "webhook.enabled"
+    value = "false"
+  }
+
+  set {
+    name  = "cainjector.enabled"
+    value = "false"
+  }
+
+  set {
+    name  = "controller.enabled"
+    value = "false"
+  }
+
+  depends_on = [time_sleep.wait_for_nginx]
+}
+
+# Wait for CRDs to be installed
+resource "time_sleep" "wait_for_crds" {
+  count           = var.install_cert_manager ? 1 : 0
+  depends_on      = [helm_release.cert_manager_crds]
+  create_duration = "60s"
+}
+
+# Install cert-manager main components
+resource "helm_release" "cert_manager" {
+  count            = var.install_cert_manager ? 1 : 0
+  name             = "cert-manager"
+  repository       = "https://charts.jetstack.io"
+  chart            = "cert-manager"
+  version          = "v1.13.2"
+  namespace        = "cert-manager"
+  create_namespace = false  # Already created by CRDs release
+  timeout          = 600
+  wait             = true
   wait_for_jobs    = true
 
   set {
     name  = "installCRDs"
-    value = "true"
+    value = "false"  # CRDs already installed
   }
 
   set {
@@ -99,14 +142,14 @@ resource "helm_release" "cert_manager" {
     value = "--enable-certificate-owner-ref=true"
   }
 
-  depends_on = [time_sleep.wait_for_nginx]
+  depends_on = [time_sleep.wait_for_crds]
 }
 
-# Wait for cert-manager to be ready
+# Wait for cert-manager to be fully ready
 resource "time_sleep" "wait_for_cert_manager" {
   count           = var.install_cert_manager ? 1 : 0
   depends_on      = [helm_release.cert_manager]
-  create_duration = "90s"
+  create_duration = "120s"  # Increased wait time
 }
 
 # Production Let's Encrypt ClusterIssuer
@@ -137,7 +180,11 @@ resource "kubernetes_manifest" "letsencrypt_prod" {
     }
   }
 
-  depends_on = [time_sleep.wait_for_cert_manager]
+  depends_on = [
+    time_sleep.wait_for_cert_manager,
+    helm_release.cert_manager_crds,
+    helm_release.cert_manager
+  ]
 }
 
 # Staging Let's Encrypt ClusterIssuer
@@ -168,5 +215,9 @@ resource "kubernetes_manifest" "letsencrypt_staging" {
     }
   }
 
-  depends_on = [time_sleep.wait_for_cert_manager]
+  depends_on = [
+    time_sleep.wait_for_cert_manager,
+    helm_release.cert_manager_crds,
+    helm_release.cert_manager
+  ]
 }
