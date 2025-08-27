@@ -8,12 +8,7 @@ variable "vault_addr" {
   default     = "https://djoo-test-vault-public-vault-a40e8748.a3bc1cae.z1.hashicorp.cloud:8200"
 }
 
-variable "vault_token" {
-  description = "Vault token for cert-manager authentication"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
+# Note: We use Kubernetes auth method, so no token variable needed
 
 variable "vault_namespace" {
   description = "Vault namespace"
@@ -34,23 +29,8 @@ variable "vault_pki_role" {
 }
 
 
-# Vault token secret for cert-manager authentication
-resource "kubernetes_secret" "vault_token" {
-  count = var.install_vault_integration && var.vault_token != "" ? 1 : 0
-
-  metadata {
-    name      = "vault-token"
-    namespace = "cert-manager"
-  }
-
-  data = {
-    token = var.vault_token
-  }
-
-  type = "Opaque"
-
-  depends_on = [helm_release.cert_manager]
-}
+# Note: Using Kubernetes auth method instead of token-based auth
+# The cert-manager ServiceAccount will authenticate directly to Vault
 
 # Vault ClusterIssuer for cert-manager
 resource "kubernetes_manifest" "vault_cluster_issuer" {
@@ -68,9 +48,12 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
         path      = "${var.vault_pki_path}/sign/${var.vault_pki_role}"
         namespace = var.vault_namespace
         auth = {
-          tokenSecretRef = {
-            name = "vault-token"
-            key  = "token"
+          kubernetes = {
+            mountPath = "kubernetes"
+            role      = "cert-manager"
+            serviceAccountRef = {
+              name = "cert-manager"
+            }
           }
         }
       }
@@ -79,7 +62,6 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
 
   depends_on = [
     helm_release.cert_manager,
-    kubernetes_secret.vault_token,
     time_sleep.wait_for_cert_manager
   ]
 }
