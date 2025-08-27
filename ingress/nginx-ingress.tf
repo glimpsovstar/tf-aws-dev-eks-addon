@@ -91,3 +91,14 @@ data "kubernetes_service" "nginx_ingress_controller" {
   
   depends_on = [helm_release.nginx_ingress, time_sleep.wait_for_nginx]
 }
+
+# Output the LoadBalancer hostname for use by other modules
+output "ingress_load_balancer_hostname" {
+  description = "NGINX Ingress LoadBalancer hostname"
+  value       = var.install_nginx_ingress ? try(data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname, "pending") : null
+}
+
+output "ingress_load_balancer_ip" {
+  description = "NGINX Ingress LoadBalancer IP (if available)"
+  value       = var.install_nginx_ingress ? try(data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].ip, null) : null
+}

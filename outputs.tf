@@ -1,26 +1,7 @@
-# Get the NGINX LoadBalancer hostname after deployment
-data "kubernetes_service" "nginx_ingress_controller" {
-  count = var.install_nginx_ingress ? 1 : 0
+# Outputs for EKS Add-ons Workspace
+# Note: Data sources and resources are defined in their respective directories
 
-  metadata {
-    name      = "nginx-ingress-ingress-nginx-controller"
-    namespace = "ingress-nginx"
-  }
-  
-  depends_on = [helm_release.nginx_ingress, time_sleep.wait_for_nginx]
-}
-
-output "ingress_load_balancer_hostname" {
-  description = "NGINX Ingress LoadBalancer hostname"
-  value       = var.install_nginx_ingress ? try(data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname, "pending") : null
-}
-
-output "ingress_load_balancer_ip" {
-  description = "NGINX Ingress LoadBalancer IP (if available)"
-  value       = var.install_nginx_ingress ? try(data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].ip, null) : null
-}
-
-# SSL Infrastructure outputs
+# Infrastructure outputs
 output "nginx_ingress_controller_installed" {
   description = "Whether NGINX ingress controller is installed"
   value       = var.install_nginx_ingress
@@ -31,30 +12,30 @@ output "cert_manager_installed" {
   value       = var.install_cert_manager
 }
 
-output "letsencrypt_cluster_issuer_prod" {
-  description = "Name of the production Let's Encrypt ClusterIssuer (create manually)"
-  value       = var.install_cert_manager && var.letsencrypt_email != "" ? "letsencrypt-prod" : null
+output "vault_integration_enabled" {
+  description = "Whether Vault PKI integration is enabled"
+  value       = var.install_vault_integration
 }
 
-output "letsencrypt_cluster_issuer_staging" {
-  description = "Name of the staging Let's Encrypt ClusterIssuer (create manually)"
-  value       = var.install_cert_manager && var.letsencrypt_email != "" ? "letsencrypt-staging" : null
+output "storage_classes_created" {
+  description = "Whether additional storage classes are created"
+  value       = var.create_storage_classes
 }
 
-output "cluster_issuers_instructions" {
-  description = "Instructions for creating ClusterIssuers manually"
-  value = "After cert-manager is deployed, apply ClusterIssuers using: kubectl apply -f cluster-issuers.yaml"
-}
-
-# Information from foundation workspace
+# Foundation workspace information
 output "eks_cluster_name" {
-  description = "EKS cluster name from foundation"
-  value       = data.terraform_remote_state.eks_foundation.outputs.eks_cluster_name
+  description = "EKS cluster name from foundation workspace"
+  value       = local.eks_cluster_name
 }
 
 output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint from foundation"
+  description = "EKS cluster endpoint from foundation workspace"
   value       = data.terraform_remote_state.eks_foundation.outputs.eks_cluster_endpoint
+}
+
+output "route53_zone_name" {
+  description = "Route53 zone name from foundation workspace"
+  value       = local.domain_name
 }
 
 # DNS outputs
@@ -66,4 +47,31 @@ output "dns_records_created" {
 output "wildcard_dns_created" {
   description = "Wildcard DNS record created"
   value       = var.create_wildcard_dns ? var.wildcard_domain : null
+}
+
+# Certificate management outputs
+output "letsencrypt_cluster_issuer_prod" {
+  description = "Name of the production Let's Encrypt ClusterIssuer"
+  value       = var.create_letsencrypt_issuers && var.letsencrypt_email != "" ? "letsencrypt-prod" : null
+}
+
+output "letsencrypt_cluster_issuer_staging" {
+  description = "Name of the staging Let's Encrypt ClusterIssuer"
+  value       = var.create_letsencrypt_issuers && var.letsencrypt_email != "" ? "letsencrypt-staging" : null
+}
+
+output "vault_cluster_issuer" {
+  description = "Name of the Vault ClusterIssuer (Phase 3)"
+  value       = var.install_vault_integration ? "vault-issuer" : null
+}
+
+# Instructions for manual steps
+output "kubectl_config_command" {
+  description = "Command to configure kubectl for the EKS cluster"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${local.eks_cluster_name}"
+}
+
+output "cluster_issuers_instructions" {
+  description = "Instructions for verifying ClusterIssuers"
+  value       = "After deployment, verify with: kubectl get clusterissuer"
 }

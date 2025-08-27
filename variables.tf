@@ -42,3 +42,30 @@ variable "wildcard_domain" {
   type        = string
   default     = ""
 }
+
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+  default     = "dev"
+}
+
+# Certificate management variables
+variable "create_letsencrypt_issuers" {
+  description = "Whether to create Let's Encrypt ClusterIssuers"
+  type        = bool
+  default     = false
+}
+
+# Vault integration variables (Phase 3)
+variable "install_vault_integration" {
+  description = "Whether to install Vault PKI integration"
+  type        = bool
+  default     = false
+}
+
+# Storage configuration
+variable "create_storage_classes" {
+  description = "Whether to create additional storage classes"
+  type        = bool
+  default     = true
+}
