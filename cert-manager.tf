@@ -29,7 +29,9 @@ resource "helm_release" "cert_manager" {
     value = "true"
   }
 
-  depends_on = [time_sleep.wait_for_nginx]
+  depends_on = [
+    data.terraform_remote_state.eks_foundation
+  ]
 }
 
 # Wait for cert-manager to be fully ready

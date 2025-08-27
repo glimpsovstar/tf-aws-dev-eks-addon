@@ -1,12 +1,6 @@
 # Let's Encrypt ClusterIssuers
 # Provides free SSL certificates via ACME protocol
 
-variable "create_letsencrypt_issuers" {
-  description = "Whether to create Let's Encrypt ClusterIssuers"
-  type        = bool
-  default     = false
-}
-
 # Let's Encrypt Production ClusterIssuer
 resource "kubernetes_manifest" "letsencrypt_prod_issuer" {
   count = var.create_letsencrypt_issuers && var.letsencrypt_email != "" ? 1 : 0

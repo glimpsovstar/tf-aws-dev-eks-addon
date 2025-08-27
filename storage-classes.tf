@@ -1,12 +1,6 @@
 # Storage Classes for EKS
 # Defines storage options for persistent volumes
 
-variable "create_storage_classes" {
-  description = "Whether to create additional storage classes"
-  type        = bool
-  default     = true
-}
-
 # GP3 Storage Class (default for most workloads)
 resource "kubernetes_storage_class" "gp3" {
   count = var.create_storage_classes ? 1 : 0

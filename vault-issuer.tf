@@ -33,11 +33,6 @@ variable "vault_pki_role" {
   default     = "kubernetes"
 }
 
-variable "install_vault_integration" {
-  description = "Whether to install Vault PKI integration"
-  type        = bool
-  default     = false
-}
 
 # Vault token secret for cert-manager authentication
 resource "kubernetes_secret" "vault_token" {
