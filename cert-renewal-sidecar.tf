@@ -69,27 +69,27 @@ resource "kubernetes_config_map" "cert_renewal_script" {
       #!/bin/bash
       set -e
       
-      CERT_NAME="$1"
-      NAMESPACE="$2"
+      CERT_NAME="$$1"
+      NAMESPACE="$$2"
       
-      echo "$(date): Renewing certificate $CERT_NAME in namespace $NAMESPACE"
+      echo "$$(date): Renewing certificate $$CERT_NAME in namespace $$NAMESPACE"
       
       # Method 1: Add force-renewal annotation to trigger immediate renewal
-      kubectl annotate certificate "$CERT_NAME" \
-        --namespace="$NAMESPACE" \
-        cert-manager.io/force-renewal="$(date +%s)" \
+      kubectl annotate certificate "$$CERT_NAME" \
+        --namespace="$$NAMESPACE" \
+        cert-manager.io/force-renewal="$$(date +%s)" \
         --overwrite
       
       # Method 2: Delete the secret to force recreation
-      kubectl delete secret "${CERT_NAME}" \
-        --namespace="$NAMESPACE" \
+      kubectl delete secret "$$CERT_NAME" \
+        --namespace="$$NAMESPACE" \
         --ignore-not-found=true
       
-      echo "$(date): Certificate renewal triggered successfully"
+      echo "$$(date): Certificate renewal triggered successfully"
       
       # Wait a moment and check status
       sleep 5
-      kubectl get certificate "$CERT_NAME" --namespace="$NAMESPACE" -o json | \
+      kubectl get certificate "$$CERT_NAME" --namespace="$$NAMESPACE" -o json | \
         jq '.status.conditions[] | select(.type=="Ready") | .status'
     EOT
     
