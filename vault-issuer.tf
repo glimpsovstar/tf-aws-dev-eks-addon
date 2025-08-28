@@ -52,8 +52,7 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
             mountPath = "auth/kubernetes"
             role      = "cert-manager"
             serviceAccountRef = {
-              name     = "cert-manager"
-              audience = "vault"
+              name = "cert-manager"
             }
           }
         }
