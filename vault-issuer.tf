@@ -29,7 +29,7 @@ variable "vault_pki_role" {
 }
 
 
-# Note: Using token-based auth with vault-token secret
+# Note: Using token-based auth with vault-token secret  
 # The vault-token secret contains a valid Vault token for authentication
 
 # Vault ClusterIssuer for cert-manager
