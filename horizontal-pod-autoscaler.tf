@@ -118,12 +118,13 @@
 # }
 
 # Output HPA information
-output "hpa_status" {
-  description = "HPA configuration status"
-  value = var.install_vault_integration && var.install_cluster_autoscaler ? {
-    name         = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].metadata[0].name
-    namespace    = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].metadata[0].namespace
-    min_replicas = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].spec[0].min_replicas
-    max_replicas = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].spec[0].max_replicas
-  } : null
-}
+# Temporarily disabled while HPA resource is commented out
+# output "hpa_status" {
+#   description = "HPA configuration status"
+#   value = var.install_vault_integration && var.install_cluster_autoscaler ? {
+#     name         = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].metadata[0].name
+#     namespace    = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].metadata[0].namespace
+#     min_replicas = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].spec[0].min_replicas
+#     max_replicas = kubernetes_horizontal_pod_autoscaler_v2.nginx_demo_hpa[0].spec[0].max_replicas
+#   } : null
+# }
