@@ -29,8 +29,8 @@ variable "vault_pki_role" {
 }
 
 
-# Note: Using Kubernetes auth method instead of token-based auth
-# The cert-manager ServiceAccount will authenticate directly to Vault
+# Note: Using token-based auth with vault-token secret
+# The vault-token secret contains a valid Vault token for authentication
 
 # Vault ClusterIssuer for cert-manager
 resource "kubernetes_manifest" "vault_cluster_issuer" {
@@ -48,12 +48,9 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
         path      = "${var.vault_pki_path}/sign/${var.vault_pki_role}"
         namespace = var.vault_namespace
         auth = {
-          kubernetes = {
-            mountPath = "auth/kubernetes"
-            role      = "cert-manager"
-            serviceAccountRef = {
-              name = "cert-manager"
-            }
+          tokenSecretRef = {
+            name = "vault-token"
+            key  = "token"
           }
         }
       }
@@ -62,7 +59,6 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
 
   depends_on = [
     helm_release.cert_manager,
-    time_sleep.wait_for_cert_manager,
-    kubernetes_cluster_role_binding.cert_manager_vault_auth
+    time_sleep.wait_for_cert_manager
   ]
 }
