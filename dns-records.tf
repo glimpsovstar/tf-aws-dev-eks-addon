@@ -3,13 +3,17 @@
 
 # DNS records from app_names + base_domain (preferred method)
 resource "aws_route53_record" "app_name_records" {
-  for_each = local.effective_app_names
-  
+  for_each = var.install_nginx_ingress ? local.effective_app_names : toset([])
+
   zone_id = local.route53_zone_id
   name    = "${each.key}.${local.effective_base_domain}"
   type    = "CNAME"
   ttl     = 300
   records = [data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname]
+
+  lifecycle {
+    ignore_changes = [records]
+  }
 
   depends_on = [
     helm_release.nginx_ingress,
@@ -20,7 +24,7 @@ resource "aws_route53_record" "app_name_records" {
 # DNS records from full domain names (legacy method)
 resource "aws_route53_record" "app_records" {
   for_each = var.app_dns_records
-  
+
   zone_id = local.route53_zone_id
   name    = each.key
   type    = "CNAME"
@@ -36,7 +40,7 @@ resource "aws_route53_record" "app_records" {
 # Create wildcard DNS record (optional)
 resource "aws_route53_record" "wildcard" {
   count = var.create_wildcard_dns && var.wildcard_domain != "" && var.install_nginx_ingress ? 1 : 0
-  
+
   zone_id = local.route53_zone_id
   name    = var.wildcard_domain
   type    = "CNAME"

@@ -14,7 +14,7 @@ resource "kubernetes_deployment" "load_generator" {
   }
 
   spec {
-    replicas = 0  # Start with 0 replicas, scale manually when testing
+    replicas = 0 # Start with 0 replicas, scale manually when testing
 
     selector {
       match_labels = {
@@ -36,7 +36,7 @@ resource "kubernetes_deployment" "load_generator" {
 
           # Generate CPU load when running
           command = ["/bin/sh"]
-          args = ["-c", "while true; do echo 'Generating load...'; dd if=/dev/zero of=/dev/null bs=1024 count=1024; sleep 1; done"]
+          args    = ["-c", "while true; do echo 'Generating load...'; dd if=/dev/zero of=/dev/null bs=1024 count=1024; sleep 1; done"]
 
           resources {
             requests = {
@@ -59,8 +59,8 @@ resource "kubernetes_deployment" "load_generator" {
 # Instructions for testing autoscaling (as output)
 output "autoscaling_test_instructions" {
   value = var.install_cluster_autoscaler ? {
-    test_hpa = "kubectl scale deployment load-generator --replicas=5 -n demo && watch 'kubectl get hpa -n demo && echo && kubectl get pods -n demo'"
+    test_hpa                = "kubectl scale deployment load-generator --replicas=5 -n demo && watch 'kubectl get hpa -n demo && echo && kubectl get pods -n demo'"
     test_cluster_autoscaler = "kubectl scale deployment nginx-demo --replicas=20 -n demo && watch 'kubectl get nodes && echo && kubectl get pods -n demo'"
-    cleanup = "kubectl scale deployment load-generator --replicas=0 -n demo && kubectl scale deployment nginx-demo --replicas=2 -n demo"
+    cleanup                 = "kubectl scale deployment load-generator --replicas=0 -n demo && kubectl scale deployment nginx-demo --replicas=2 -n demo"
   } : null
 }

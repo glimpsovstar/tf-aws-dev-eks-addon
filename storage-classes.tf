@@ -17,8 +17,8 @@ resource "kubernetes_storage_class" "gp3" {
   volume_binding_mode    = "WaitForFirstConsumer"
 
   parameters = {
-    type      = "gp3"
-    encrypted = "true"
+    type       = "gp3"
+    encrypted  = "true"
     throughput = "125"
     iops       = "3000"
   }
@@ -37,8 +37,8 @@ resource "kubernetes_storage_class" "vault_storage" {
   volume_binding_mode    = "WaitForFirstConsumer"
 
   parameters = {
-    type      = "gp3"
-    encrypted = "true"
+    type       = "gp3"
+    encrypted  = "true"
     throughput = "250"  # Higher throughput for Vault
     iops       = "4000" # Higher IOPS for Vault
   }

@@ -2,7 +2,7 @@ terraform {
   cloud {
     organization = "djoo-hashicorp"
     workspaces {
-      name = "tf-aws-dev-eks-addon"  # Fixed: singular to match directory
+      name = "tf-aws-dev-eks-addon" # Fixed: singular to match directory
     }
   }
 }
@@ -15,7 +15,7 @@ provider "aws" {
 provider "kubernetes" {
   host                   = data.terraform_remote_state.eks_foundation.outputs.eks_cluster_endpoint
   cluster_ca_certificate = base64decode(data.terraform_remote_state.eks_foundation.outputs.eks_certificate_authority)
-  
+
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
@@ -35,7 +35,7 @@ provider "helm" {
   kubernetes {
     host                   = data.terraform_remote_state.eks_foundation.outputs.eks_cluster_endpoint
     cluster_ca_certificate = base64decode(data.terraform_remote_state.eks_foundation.outputs.eks_certificate_authority)
-    
+
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"

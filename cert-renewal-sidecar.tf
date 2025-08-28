@@ -11,6 +11,10 @@ resource "kubernetes_service_account" "cert_renewal" {
   }
 
   automount_service_account_token = true
+
+  lifecycle {
+    ignore_changes = [metadata[0].resource_version]
+  }
 }
 
 # ClusterRole for certificate management
@@ -19,6 +23,10 @@ resource "kubernetes_cluster_role" "cert_renewal" {
 
   metadata {
     name = "cert-renewal"
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].resource_version]
   }
 
   rule {
@@ -64,6 +72,10 @@ resource "kubernetes_config_map" "cert_renewal_script" {
     namespace = "demo"
   }
 
+  lifecycle {
+    ignore_changes = [metadata[0].resource_version]
+  }
+
   data = {
     "renew-cert.sh" = <<-EOT
       #!/bin/bash
@@ -92,7 +104,7 @@ resource "kubernetes_config_map" "cert_renewal_script" {
       kubectl get certificate "$$CERT_NAME" --namespace="$$NAMESPACE" -o json | \
         jq '.status.conditions[] | select(.type=="Ready") | .status'
     EOT
-    
+
     "server.py" = <<-EOT
       #!/usr/bin/env python3
       import json

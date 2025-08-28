@@ -17,7 +17,7 @@ variable "cluster_autoscaler_version" {
 # IAM role for Cluster Autoscaler
 resource "aws_iam_role" "cluster_autoscaler" {
   count = var.install_cluster_autoscaler ? 1 : 0
-  
+
   name = "${local.eks_cluster_name}-cluster-autoscaler"
 
   assume_role_policy = jsonencode({
@@ -40,7 +40,7 @@ resource "aws_iam_role" "cluster_autoscaler" {
   })
 
   tags = {
-    Name = "${local.eks_cluster_name}-cluster-autoscaler"
+    Name        = "${local.eks_cluster_name}-cluster-autoscaler"
     Environment = var.environment
   }
 }
@@ -48,7 +48,7 @@ resource "aws_iam_role" "cluster_autoscaler" {
 # IAM policy for Cluster Autoscaler
 resource "aws_iam_policy" "cluster_autoscaler" {
   count = var.install_cluster_autoscaler ? 1 : 0
-  
+
   name        = "${local.eks_cluster_name}-cluster-autoscaler"
   description = "Policy for Cluster Autoscaler"
 
@@ -80,7 +80,7 @@ resource "aws_iam_policy" "cluster_autoscaler" {
 # Attach policy to role
 resource "aws_iam_role_policy_attachment" "cluster_autoscaler" {
   count = var.install_cluster_autoscaler ? 1 : 0
-  
+
   policy_arn = aws_iam_policy.cluster_autoscaler[0].arn
   role       = aws_iam_role.cluster_autoscaler[0].name
 }
@@ -116,36 +116,36 @@ resource "helm_release" "cluster_autoscaler" {
         clusterName = local.eks_cluster_name
         enabled     = true
       }
-      
+
       awsRegion = var.aws_region
-      
+
       serviceAccount = {
         create = false
         name   = kubernetes_service_account.cluster_autoscaler[0].metadata[0].name
       }
-      
+
       # Autoscaler configuration
       extraArgs = {
         # Scale down configuration
-        "scale-down-delay-after-add"       = "10m"    # Wait 10min before scale down after scale up
-        "scale-down-unneeded-time"         = "10m"    # Scale down after 10min of being unneeded
-        "scale-down-delay-after-delete"    = "10s"    # Wait 10s before scale down after node deletion
-        "scale-down-delay-after-failure"   = "3m"     # Wait 3min after scale down failure
-        
+        "scale-down-delay-after-add"     = "10m" # Wait 10min before scale down after scale up
+        "scale-down-unneeded-time"       = "10m" # Scale down after 10min of being unneeded
+        "scale-down-delay-after-delete"  = "10s" # Wait 10s before scale down after node deletion
+        "scale-down-delay-after-failure" = "3m"  # Wait 3min after scale down failure
+
         # Scale up configuration  
-        "scale-down-utilization-threshold" = "0.5"    # Scale down when utilization < 50%
-        "skip-nodes-with-local-storage"    = "false"  # Allow scaling down nodes with local storage
-        "skip-nodes-with-system-pods"      = "false"  # Allow scaling down nodes with system pods
-        
+        "scale-down-utilization-threshold" = "0.5"   # Scale down when utilization < 50%
+        "skip-nodes-with-local-storage"    = "false" # Allow scaling down nodes with local storage
+        "skip-nodes-with-system-pods"      = "false" # Allow scaling down nodes with system pods
+
         # General configuration
-        "balance-similar-node-groups"      = "false"  # Don't balance between similar node groups
-        "expander"                         = "random" # Use random expander for node group selection
-        "max-node-provision-time"          = "15m"    # Max time to wait for node to be provisioned
-        "max-empty-bulk-delete"            = "10"     # Max number of empty nodes to delete at once
-        "new-pod-scale-up-delay"           = "0s"     # No delay for new pods triggering scale up
-        "scan-interval"                    = "10s"    # Scan for scale opportunities every 10s
+        "balance-similar-node-groups" = "false"  # Don't balance between similar node groups
+        "expander"                    = "random" # Use random expander for node group selection
+        "max-node-provision-time"     = "15m"    # Max time to wait for node to be provisioned
+        "max-empty-bulk-delete"       = "10"     # Max number of empty nodes to delete at once
+        "new-pod-scale-up-delay"      = "0s"     # No delay for new pods triggering scale up
+        "scan-interval"               = "10s"    # Scan for scale opportunities every 10s
       }
-      
+
       # Resource limits
       resources = {
         limits = {
@@ -157,20 +157,20 @@ resource "helm_release" "cluster_autoscaler" {
           memory = "300Mi"
         }
       }
-      
+
       # Node selector to run on system nodes
       nodeSelector = {}
-      
+
       # Pod disruption budget
       podDisruptionBudget = {
         maxUnavailable = 1
       }
-      
+
       # Pod annotations
       podAnnotations = {
         "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
       }
-      
+
       # Image configuration
       image = {
         repository = "registry.k8s.io/autoscaling/cluster-autoscaler"

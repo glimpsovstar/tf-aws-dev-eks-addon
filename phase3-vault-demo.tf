@@ -25,8 +25,8 @@ resource "kubernetes_manifest" "demo_certificate" {
       namespace = "demo"
     }
     spec = {
-      secretName  = "${var.demo_app_name}-tls"
-      commonName  = "${var.demo_app_name}.${local.effective_base_domain}"
+      secretName = "${var.demo_app_name}-tls"
+      commonName = "${var.demo_app_name}.${local.effective_base_domain}"
       dnsNames = [
         "${var.demo_app_name}.${local.effective_base_domain}",
         "${var.demo_app_name}.demo.svc.cluster.local"
@@ -69,6 +69,10 @@ resource "kubernetes_config_map" "nginx_html" {
 
   data = {
     "index.html" = file("${path.module}/ssl-monitor.html")
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].resource_version]
   }
 
   depends_on = [kubernetes_namespace.demo]
@@ -187,7 +191,7 @@ resource "kubernetes_deployment" "nginx_demo" {
 
       spec {
         service_account_name = var.install_vault_integration ? kubernetes_service_account.cert_renewal[0].metadata[0].name : "default"
-        
+
         container {
           image = "nginx:alpine"
           name  = "nginx"
@@ -222,23 +226,23 @@ resource "kubernetes_deployment" "nginx_demo" {
 
           resources {
             requests = {
-              memory = "64Mi"   # Minimum memory required
-              cpu    = "100m"   # Minimum CPU required for HPA
+              memory = "64Mi" # Minimum memory required
+              cpu    = "100m" # Minimum CPU required for HPA
             }
             limits = {
-              memory = "256Mi"  # Maximum memory allowed (increased for scaling)
-              cpu    = "500m"   # Maximum CPU allowed (increased for scaling)
+              memory = "256Mi" # Maximum memory allowed (increased for scaling)
+              cpu    = "500m"  # Maximum CPU allowed (increased for scaling)
             }
           }
         }
-        
+
         # Certificate renewal sidecar container (only when vault integration is enabled)
         dynamic "container" {
           for_each = var.install_vault_integration ? [1] : []
           content {
             image = "alpine:latest"
             name  = "cert-renewal-sidecar"
-            
+
             command = ["/bin/sh", "-c"]
             args = [
               "apk add --no-cache curl jq bash python3 py3-pip && pip install --no-cache-dir requests && python3 /scripts/server.py"
@@ -246,7 +250,7 @@ resource "kubernetes_deployment" "nginx_demo" {
 
             port {
               container_port = 8080
-              name          = "renewal-api"
+              name           = "renewal-api"
             }
 
             volume_mount {
@@ -267,7 +271,7 @@ resource "kubernetes_deployment" "nginx_demo" {
             }
 
             env {
-              name = "PYTHONUNBUFFERED"
+              name  = "PYTHONUNBUFFERED"
               value = "1"
             }
           }
@@ -293,14 +297,14 @@ resource "kubernetes_deployment" "nginx_demo" {
             name = "nginx-html"
           }
         }
-        
+
         # Renewal scripts volume (only when vault integration is enabled)
         dynamic "volume" {
           for_each = var.install_vault_integration ? [1] : []
           content {
             name = "renewal-scripts"
             config_map {
-              name = kubernetes_config_map.cert_renewal_script[0].metadata[0].name
+              name         = kubernetes_config_map.cert_renewal_script[0].metadata[0].name
               default_mode = "0755"
             }
           }
@@ -331,7 +335,7 @@ resource "kubernetes_service" "nginx_demo" {
       app = replace(var.demo_app_name, "\"", "")
     }
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
+      "service.beta.kubernetes.io/aws-load-balancer-type"   = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-scheme" = "internet-facing"
     }
   }
