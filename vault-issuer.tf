@@ -49,10 +49,11 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
         namespace = var.vault_namespace
         auth = {
           kubernetes = {
-            mountPath = "kubernetes"
+            mountPath = "auth/kubernetes"
             role      = "cert-manager"
             serviceAccountRef = {
-              name = "cert-manager"
+              name     = "cert-manager"
+              audience = "vault"
             }
           }
         }
@@ -62,6 +63,7 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
 
   depends_on = [
     helm_release.cert_manager,
-    time_sleep.wait_for_cert_manager
+    time_sleep.wait_for_cert_manager,
+    kubernetes_cluster_role_binding.cert_manager_vault_auth
   ]
 }
