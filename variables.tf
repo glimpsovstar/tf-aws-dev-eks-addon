@@ -86,7 +86,7 @@ variable "demo_app_name" {
 variable "manage_existing_resources" {
   description = "Whether to manage existing resources that were created manually (set to false to avoid conflicts)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # Storage configuration

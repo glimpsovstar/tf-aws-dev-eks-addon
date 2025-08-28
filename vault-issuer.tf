@@ -28,9 +28,16 @@ variable "vault_pki_role" {
   default     = "kubernetes"
 }
 
+variable "vault_k8s_auth_path" {
+  description = "Vault Kubernetes auth mount path"
+  type        = string
+  default     = "kubernetes"
+}
+
 
 # Note: Using Kubernetes auth method for cert-manager ServiceAccount
 # The cert-manager ServiceAccount will authenticate directly to Vault using K8s JWT
+# RBAC permissions are configured in cert-manager-rbac.tf
 
 # Vault ClusterIssuer for cert-manager using Kubernetes auth
 resource "kubernetes_manifest" "vault_cluster_issuer" {
@@ -52,7 +59,7 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
         namespace = var.vault_namespace
         auth = {
           kubernetes = {
-            mountPath = "auth/kubernetes"
+            mountPath = var.vault_k8s_auth_path
             role      = "cert-manager"
             serviceAccountRef = {
               name = "cert-manager"
