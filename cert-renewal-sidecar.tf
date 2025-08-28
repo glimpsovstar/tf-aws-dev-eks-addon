@@ -12,9 +12,6 @@ resource "kubernetes_service_account" "cert_renewal" {
 
   automount_service_account_token = true
 
-  lifecycle {
-    ignore_changes = [metadata[0].resource_version]
-  }
 }
 
 # ClusterRole for certificate management
@@ -23,10 +20,6 @@ resource "kubernetes_cluster_role" "cert_renewal" {
 
   metadata {
     name = "cert-renewal"
-  }
-
-  lifecycle {
-    ignore_changes = [metadata[0].resource_version]
   }
 
   rule {
@@ -73,7 +66,7 @@ resource "kubernetes_config_map" "cert_renewal_script" {
   }
 
   lifecycle {
-    ignore_changes = [metadata[0].resource_version]
+    ignore_changes = []
   }
 
   data = {

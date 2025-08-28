@@ -71,10 +71,6 @@ resource "kubernetes_config_map" "nginx_html" {
     "index.html" = file("${path.module}/ssl-monitor.html")
   }
 
-  lifecycle {
-    ignore_changes = [metadata[0].resource_version]
-  }
-
   depends_on = [kubernetes_namespace.demo]
 }
 
@@ -325,7 +321,6 @@ resource "kubernetes_deployment" "nginx_demo" {
 
   lifecycle {
     ignore_changes = [
-      metadata[0].resource_version,
       spec[0].template[0].metadata[0].annotations,
       spec[0].template[0].metadata[0].labels
     ]
@@ -378,7 +373,6 @@ resource "kubernetes_service" "nginx_demo" {
 
   lifecycle {
     ignore_changes = [
-      metadata[0].resource_version,
       metadata[0].annotations
     ]
   }
