@@ -54,12 +54,11 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
     }
     spec = {
       vault = {
-        server    = var.vault_addr
-        path      = "${var.vault_pki_path}/sign/${var.vault_pki_role}"
-        namespace = var.vault_namespace
+        server    = "${var.vault_addr}/v1"
+        path      = "${var.vault_namespace}/${var.vault_pki_path}/sign/${var.vault_pki_role}"
         auth = {
           kubernetes = {
-            mountPath = "auth/${var.vault_k8s_auth_path}"
+            mountPath = "${var.vault_namespace}/auth/${var.vault_k8s_auth_path}"
             role      = "cert-manager"
             serviceAccountRef = {
               name = "cert-manager"
