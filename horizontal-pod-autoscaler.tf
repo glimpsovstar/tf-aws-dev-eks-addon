@@ -84,9 +84,9 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "nginx_demo_hpa" {
     }
   }
 
-  depends_on = [
-    kubernetes_deployment.nginx_demo
-  ]
+  # depends_on = [
+  #   kubernetes_deployment.nginx_demo
+  # ]
 }
 
 # Note: Vertical Pod Autoscaler (VPA) disabled - requires VPA CRDs to be installed first
