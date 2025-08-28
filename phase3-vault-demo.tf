@@ -157,12 +157,180 @@ resource "kubernetes_config_map" "nginx_config" {
   depends_on = [kubernetes_namespace.demo]
 }
 
-# NGINX Demo Deployment
-# Temporarily removed completely to fix Terraform state corruption
-# Will be added back once certificates are working
-# resource "kubernetes_deployment" "nginx_demo" { ... }
+# NGINX Demo Deployment with automatic certificate rotation
+resource "kubernetes_deployment" "nginx_demo" {
+  count = var.install_vault_integration ? 1 : 0
+
+  metadata {
+    name      = var.demo_app_name
+    namespace = "demo"
+    labels = {
+      app     = var.demo_app_name
+      tier    = "frontend"
+      purpose = "vault-demo"
+    }
+  }
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = {
+        app = var.demo_app_name
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app     = var.demo_app_name
+          tier    = "frontend"
+          purpose = "vault-demo"
+        }
+        annotations = {
+          "cert-manager.io/issuer" = "vault-issuer"
+        }
+      }
+
+      spec {
+        container {
+          name  = "nginx"
+          image = "nginx:alpine"
+
+          ports {
+            container_port = 80
+            name           = "http"
+          }
+          
+          ports {
+            container_port = 443
+            name           = "https"
+          }
+
+          volume_mount {
+            name       = "nginx-config"
+            mount_path = "/etc/nginx/conf.d"
+          }
+          
+          volume_mount {
+            name       = "nginx-html"
+            mount_path = "/usr/share/nginx/html"
+          }
+          
+          volume_mount {
+            name       = "tls-certs"
+            mount_path = "/etc/nginx/certs"
+            read_only  = true
+          }
+
+          resources {
+            requests = {
+              cpu    = "100m"
+              memory = "128Mi"
+            }
+            limits = {
+              cpu    = "200m"
+              memory = "256Mi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 80
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 10
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 80
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 5
+          }
+        }
+
+        volume {
+          name = "nginx-config"
+          config_map {
+            name = kubernetes_config_map.nginx_config[0].metadata[0].name
+          }
+        }
+        
+        volume {
+          name = "nginx-html"
+          config_map {
+            name = kubernetes_config_map.nginx_html[0].metadata[0].name
+          }
+        }
+        
+        volume {
+          name = "tls-certs"
+          secret {
+            secret_name = "${var.demo_app_name}-tls"
+            items {
+              key  = "tls.crt"
+              path = "tls.crt"
+            }
+            items {
+              key  = "tls.key"
+              path = "tls.key"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    kubernetes_namespace.demo,
+    kubernetes_manifest.demo_certificate,
+    kubernetes_config_map.nginx_config,
+    kubernetes_config_map.nginx_html
+  ]
+}
 
 # Service for demo application (LoadBalancer for direct access)
-# Temporarily removed completely to fix Terraform state corruption
-# Will be added back once certificates are working
-# resource "kubernetes_service" "nginx_demo" { ... }
+resource "kubernetes_service" "nginx_demo" {
+  count = var.install_vault_integration ? 1 : 0
+
+  metadata {
+    name      = var.demo_app_name
+    namespace = "demo"
+    labels = {
+      app = var.demo_app_name
+    }
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
+    }
+  }
+
+  spec {
+    selector = {
+      app = var.demo_app_name
+    }
+    
+    port {
+      name        = "http"
+      port        = 80
+      target_port = 80
+      protocol    = "TCP"
+    }
+    
+    port {
+      name        = "https"
+      port        = 443
+      target_port = 443
+      protocol    = "TCP"
+    }
+    
+    type = "LoadBalancer"
+  }
+
+  depends_on = [
+    kubernetes_deployment.nginx_demo
+  ]
+}
