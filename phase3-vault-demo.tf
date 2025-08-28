@@ -21,15 +21,15 @@ resource "kubernetes_manifest" "demo_certificate" {
     apiVersion = "cert-manager.io/v1"
     kind       = "Certificate"
     metadata = {
-      name      = "nginx-demo-tls"
+      name      = "${var.demo_app_name}-tls"
       namespace = "demo"
     }
     spec = {
-      secretName  = "nginx-demo-tls"
-      commonName  = "nginx-demo.${local.domain_name}"
+      secretName  = "${var.demo_app_name}-tls"
+      commonName  = "${var.demo_app_name}.${local.effective_base_domain}"
       dnsNames = [
-        "nginx-demo.${local.domain_name}",
-        "nginx-demo.demo.svc.cluster.local"
+        "${var.demo_app_name}.${local.effective_base_domain}",
+        "${var.demo_app_name}.demo.svc.cluster.local"
       ]
       duration    = "24h"
       renewBefore = "8h"
@@ -73,7 +73,7 @@ resource "kubernetes_config_map" "nginx_config" {
           listen 80;
           listen 443 ssl;
           
-          server_name nginx-demo.${local.domain_name};
+          server_name ${var.demo_app_name}.${local.effective_base_domain};
           
           ssl_certificate /etc/nginx/certs/tls.crt;
           ssl_certificate_key /etc/nginx/certs/tls.key;
@@ -105,10 +105,10 @@ resource "kubernetes_deployment" "nginx_demo" {
   count = var.install_vault_integration ? 1 : 0
 
   metadata {
-    name      = "nginx-demo"
+    name      = var.demo_app_name
     namespace = "demo"
     labels = {
-      app = "nginx-demo"
+      app = var.demo_app_name
     }
   }
 
@@ -117,14 +117,14 @@ resource "kubernetes_deployment" "nginx_demo" {
 
     selector {
       match_labels = {
-        app = "nginx-demo"
+        app = var.demo_app_name
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "nginx-demo"
+          app = var.demo_app_name
         }
       }
 
@@ -170,7 +170,7 @@ resource "kubernetes_deployment" "nginx_demo" {
         volume {
           name = "tls-certs"
           secret {
-            secret_name = "nginx-demo-tls"
+            secret_name = "${var.demo_app_name}-tls"
           }
         }
 
@@ -196,10 +196,10 @@ resource "kubernetes_service" "nginx_demo" {
   count = var.install_vault_integration ? 1 : 0
 
   metadata {
-    name      = "nginx-demo"
+    name      = var.demo_app_name
     namespace = "demo"
     labels = {
-      app = "nginx-demo"
+      app = var.demo_app_name
     }
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
@@ -211,7 +211,7 @@ resource "kubernetes_service" "nginx_demo" {
     type = "LoadBalancer"
 
     selector = {
-      app = "nginx-demo"
+      app = var.demo_app_name
     }
 
     port {

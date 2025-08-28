@@ -24,8 +24,22 @@ variable "install_cert_manager" {
 }
 
 # DNS Configuration for LoadBalancer-dependent records
+variable "base_domain" {
+  description = "Base domain for creating app DNS records"
+  type        = string
+  default     = ""
+  # Example: "david-joo.sbx.hashidemos.io"
+}
+
+variable "app_names" {
+  description = "List of app names to create DNS records for (will be prefixed to base_domain)"
+  type        = set(string)
+  default     = []
+  # Example: ["nginx-demo", "vault", "api"] creates nginx-demo.domain.com, vault.domain.com, etc.
+}
+
 variable "app_dns_records" {
-  description = "DNS records to create pointing to LoadBalancer"
+  description = "Full DNS records to create pointing to LoadBalancer (legacy - use app_names + base_domain instead)"
   type        = set(string)
   default     = []
   # Example: ["vault.yourdomain.com", "api.yourdomain.com"]
@@ -61,6 +75,12 @@ variable "install_vault_integration" {
   description = "Whether to install Vault PKI integration"
   type        = bool
   default     = false
+}
+
+variable "demo_app_name" {
+  description = "Name of the demo app for DNS and certificate"
+  type        = string
+  default     = "nginx-demo"
 }
 
 # Storage configuration

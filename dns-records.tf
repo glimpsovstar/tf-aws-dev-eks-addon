@@ -1,6 +1,23 @@
 # DNS Records for LoadBalancer
 # Creates DNS records pointing to the NGINX ingress LoadBalancer
 
+# DNS records from app_names + base_domain (preferred method)
+resource "aws_route53_record" "app_name_records" {
+  for_each = var.app_names
+  
+  zone_id = local.route53_zone_id
+  name    = "${each.key}.${local.effective_base_domain}"
+  type    = "CNAME"
+  ttl     = 300
+  records = [data.kubernetes_service.nginx_ingress_controller[0].status[0].load_balancer[0].ingress[0].hostname]
+
+  depends_on = [
+    helm_release.nginx_ingress,
+    data.kubernetes_service.nginx_ingress_controller
+  ]
+}
+
+# DNS records from full domain names (legacy method)
 resource "aws_route53_record" "app_records" {
   for_each = var.app_dns_records
   
