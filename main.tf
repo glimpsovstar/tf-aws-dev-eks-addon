@@ -22,6 +22,5 @@ locals {
   effective_base_domain = var.base_domain != "" ? var.base_domain : local.domain_name
 
   # Convert app_names list to set for for_each usage
-  # Exclude nginx-demo from app_names as it has its own dedicated DNS record
-  effective_app_names = toset([for app in var.app_names : app if app != "nginx-demo"])
+  effective_app_names = toset(var.app_names)
 }

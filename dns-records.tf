@@ -52,22 +52,3 @@ resource "aws_route53_record" "wildcard" {
     data.kubernetes_service.nginx_ingress_controller
   ]
 }
-
-# DNS record for Vault demo application (using direct LoadBalancer)
-resource "aws_route53_record" "nginx_demo" {
-  count = var.install_vault_integration ? 1 : 0
-
-  zone_id = local.route53_zone_id
-  name    = "${var.demo_app_name}.${local.effective_base_domain}"
-  type    = "CNAME"
-  ttl     = 300
-  records = [kubernetes_service.nginx_demo[0].status[0].load_balancer[0].ingress[0].hostname]
-
-  lifecycle {
-    ignore_changes = [records]
-  }
-
-  depends_on = [
-    kubernetes_service.nginx_demo
-  ]
-}
