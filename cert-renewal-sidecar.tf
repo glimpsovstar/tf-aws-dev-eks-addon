@@ -3,7 +3,7 @@
 
 # ServiceAccount for cert renewal operations
 resource "kubernetes_service_account" "cert_renewal" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name      = "cert-renewal"
@@ -19,7 +19,7 @@ resource "kubernetes_service_account" "cert_renewal" {
 
 # ClusterRole for certificate management
 resource "kubernetes_cluster_role" "cert_renewal" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name = "cert-renewal"
@@ -44,7 +44,7 @@ resource "kubernetes_cluster_role" "cert_renewal" {
 
 # ClusterRoleBinding
 resource "kubernetes_cluster_role_binding" "cert_renewal" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name = "cert-renewal"
@@ -65,7 +65,7 @@ resource "kubernetes_cluster_role_binding" "cert_renewal" {
 
 # ConfigMap with the renewal script
 resource "kubernetes_config_map" "cert_renewal_script" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name      = "cert-renewal-script"

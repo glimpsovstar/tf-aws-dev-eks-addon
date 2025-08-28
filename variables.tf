@@ -83,6 +83,12 @@ variable "demo_app_name" {
   default     = "nginx-demo"
 }
 
+variable "manage_existing_resources" {
+  description = "Whether to manage existing resources that were created manually (set to false to avoid conflicts)"
+  type        = bool
+  default     = false
+}
+
 # Storage configuration
 variable "create_storage_classes" {
   description = "Whether to create additional storage classes"

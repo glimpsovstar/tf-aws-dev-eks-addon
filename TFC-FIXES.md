@@ -2,15 +2,15 @@
 
 ## Issues Fixed
 
-### 1. Route53 DNS Record Conflict
-- **Problem**: DNS record `nginx-demo.dev.david-joo.sbx.hashidemos.io` already exists
-- **Fix**: Added lifecycle `ignore_changes = [records]` and conditional creation
-- **File**: `dns-records.tf`
-
-### 2. Kubernetes Resource Conflicts  
-- **Problem**: cert_renewal resources already exist, causing creation timeouts
-- **Fix**: Added lifecycle `ignore_changes = [metadata[0].resource_version]` to all cert-renewal resources
-- **Files**: `cert-renewal-sidecar.tf`, `phase3-vault-demo.tf`
+### 1. Resource Already Exists Conflicts
+- **Problem**: Multiple resources already exist from manual creation:
+  - DNS record `nginx-demo.dev.david-joo.sbx.hashidemos.io` 
+  - ConfigMaps: `nginx-html`, `cert-renewal-script`
+  - ServiceAccount: `cert-renewal`
+  - ClusterRole: `cert-renewal`
+  - ClusterRoleBinding: `cert-renewal`
+- **Fix**: Added `manage_existing_resources` variable (default: false) to disable creation of existing resources
+- **Files**: `variables.tf`, `dns-records.tf`, `cert-renewal-sidecar.tf`, `phase3-vault-demo.tf`
 
 ### 3. Metrics Server Helm Timeout
 - **Problem**: Helm chart installation taking >2.5 minutes, causing timeouts  

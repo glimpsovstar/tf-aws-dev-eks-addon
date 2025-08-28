@@ -60,7 +60,7 @@ resource "kubernetes_manifest" "demo_certificate" {
 
 # HTML content for SSL monitoring website
 resource "kubernetes_config_map" "nginx_html" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name      = "nginx-html"
@@ -190,7 +190,7 @@ resource "kubernetes_deployment" "nginx_demo" {
       }
 
       spec {
-        service_account_name = var.install_vault_integration ? kubernetes_service_account.cert_renewal[0].metadata[0].name : "default"
+        service_account_name = var.install_vault_integration ? (var.manage_existing_resources ? kubernetes_service_account.cert_renewal[0].metadata[0].name : "cert-renewal") : "default"
 
         container {
           image = "nginx:alpine"
@@ -219,7 +219,7 @@ resource "kubernetes_deployment" "nginx_demo" {
           }
 
           volume_mount {
-            name       = "nginx-html"
+            name       = "nginx-html" 
             mount_path = "/usr/share/nginx/html"
             read_only  = true
           }
@@ -294,7 +294,7 @@ resource "kubernetes_deployment" "nginx_demo" {
         volume {
           name = "nginx-html"
           config_map {
-            name = "nginx-html"
+            name = var.manage_existing_resources ? kubernetes_config_map.nginx_html[0].metadata[0].name : "nginx-html"
           }
         }
 
@@ -304,7 +304,7 @@ resource "kubernetes_deployment" "nginx_demo" {
           content {
             name = "renewal-scripts"
             config_map {
-              name         = kubernetes_config_map.cert_renewal_script[0].metadata[0].name
+              name         = var.manage_existing_resources ? kubernetes_config_map.cert_renewal_script[0].metadata[0].name : "cert-renewal-script"
               default_mode = "0755"
             }
           }
@@ -316,11 +316,7 @@ resource "kubernetes_deployment" "nginx_demo" {
   depends_on = [
     kubernetes_namespace.demo,
     kubernetes_manifest.demo_certificate,
-    kubernetes_config_map.nginx_config,
-    kubernetes_config_map.nginx_html,
-    kubernetes_config_map.cert_renewal_script,
-    kubernetes_service_account.cert_renewal,
-    kubernetes_cluster_role_binding.cert_renewal
+    kubernetes_config_map.nginx_config
   ]
 }
 
