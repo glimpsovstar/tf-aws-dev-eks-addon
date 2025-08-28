@@ -191,12 +191,12 @@ resource "kubernetes_deployment" "nginx_demo" {
           name  = "nginx"
           image = "nginx:alpine"
 
-          ports {
+          port {
             container_port = 80
             name           = "http"
           }
           
-          ports {
+          port {
             container_port = 443
             name           = "https"
           }
