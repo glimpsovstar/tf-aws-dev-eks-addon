@@ -62,6 +62,7 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
             role      = "cert-manager"
             serviceAccountRef = {
               name = "cert-manager"
+              audiences = ["${var.vault_addr}/v1"]
             }
           }
         }
