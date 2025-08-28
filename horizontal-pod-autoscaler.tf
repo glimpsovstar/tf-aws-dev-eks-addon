@@ -7,8 +7,9 @@
 # Then: kubectl patch deployment metrics-server -n kube-system --type json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
 
 # HPA for nginx-demo app
+# Temporarily disabled while nginx-demo deployment is disabled
 resource "kubernetes_horizontal_pod_autoscaler_v2" "nginx_demo_hpa" {
-  count = var.install_vault_integration && var.install_cluster_autoscaler ? 1 : 0
+  count = false && var.install_vault_integration && var.install_cluster_autoscaler ? 1 : 0
 
   metadata {
     name      = "${var.demo_app_name}-hpa"

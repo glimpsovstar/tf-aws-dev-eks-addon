@@ -22,6 +22,11 @@
 - **Fix**: Made deployment and service conditional on `manage_existing_resources` to avoid conflicts
 - **File**: `phase3-vault-demo.tf`
 
+### 5. Kubernetes Provider Identity Issues
+- **Problem**: `Unexpected Identity Change` error with nginx-demo deployment
+- **Fix**: Temporarily disabled nginx-demo deployment, service, and HPA until certificates work
+- **Files**: `phase3-vault-demo.tf`, `horizontal-pod-autoscaler.tf`
+
 ## Manual Steps Required After TFC Apply
 
 ### 1. Install Metrics Server (if not already installed)
