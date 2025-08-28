@@ -175,6 +175,16 @@ resource "kubernetes_deployment" "nginx_demo" {
 
   spec {
     replicas = 2
+    
+    strategy {
+      type = "RollingUpdate"
+      rolling_update {
+        max_unavailable = "50%"
+        max_surge       = "50%"
+      }
+    }
+    
+    progress_deadline_seconds = 300
 
     selector {
       match_labels = {
@@ -313,6 +323,14 @@ resource "kubernetes_deployment" "nginx_demo" {
     }
   }
 
+  lifecycle {
+    ignore_changes = [
+      metadata[0].resource_version,
+      spec[0].template[0].metadata[0].annotations,
+      spec[0].template[0].metadata[0].labels
+    ]
+  }
+
   depends_on = [
     kubernetes_namespace.demo,
     kubernetes_manifest.demo_certificate,
@@ -356,6 +374,13 @@ resource "kubernetes_service" "nginx_demo" {
       target_port = 443
       protocol    = "TCP"
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      metadata[0].resource_version,
+      metadata[0].annotations
+    ]
   }
 
   depends_on = [kubernetes_deployment.nginx_demo]

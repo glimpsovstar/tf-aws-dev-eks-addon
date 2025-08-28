@@ -17,6 +17,11 @@
 - **Fix**: Disabled Helm-based metrics server, documented manual installation
 - **File**: `horizontal-pod-autoscaler.tf`
 
+### 4. Nginx Deployment Timeout
+- **Problem**: `kubernetes_deployment.nginx_demo[0]` timing out during TFC apply
+- **Fix**: Added lifecycle management, rolling update strategy, and progress deadline
+- **File**: `phase3-vault-demo.tf`
+
 ## Manual Steps Required After TFC Apply
 
 ### 1. Install Metrics Server (if not already installed)
