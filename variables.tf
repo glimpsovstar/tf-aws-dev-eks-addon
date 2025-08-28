@@ -33,7 +33,7 @@ variable "base_domain" {
 
 variable "app_names" {
   description = "List of app names to create DNS records for (will be prefixed to base_domain)"
-  type        = set(string)
+  type        = list(string)
   default     = []
   # Example: ["nginx-demo", "vault", "api"] creates nginx-demo.domain.com, vault.domain.com, etc.
 }

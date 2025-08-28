@@ -21,10 +21,6 @@ locals {
   # Use base_domain if provided, otherwise fall back to foundation domain
   effective_base_domain = var.base_domain != "" ? var.base_domain : local.domain_name
   
-  # Handle app_names variable - support both set and string formats from TFC
-  effective_app_names = try(
-    var.app_names,  # If it's already a set, use it
-    toset(jsondecode(var.app_names)),  # If it's a JSON string, parse it
-    toset([])  # Fallback to empty set
-  )
+  # Convert app_names list to set for for_each usage
+  effective_app_names = toset(var.app_names)
 }
