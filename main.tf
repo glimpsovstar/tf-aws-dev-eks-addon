@@ -9,6 +9,9 @@ data "terraform_remote_state" "eks_foundation" {
   }
 }
 
+# Data source to get current AWS account ID
+data "aws_caller_identity" "current" {}
+
 # Local values for common configuration
 locals {
   route53_zone_id = data.terraform_remote_state.eks_foundation.outputs.route53_zone_id
