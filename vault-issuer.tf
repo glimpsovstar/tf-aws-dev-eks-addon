@@ -43,6 +43,10 @@ variable "vault_k8s_auth_path" {
 resource "kubernetes_manifest" "vault_cluster_issuer" {
   count = var.install_vault_integration && var.vault_addr != "" ? 1 : 0
 
+  field_manager {
+    force_conflicts = true
+  }
+
   manifest = {
     apiVersion = "cert-manager.io/v1"
     kind       = "ClusterIssuer"
