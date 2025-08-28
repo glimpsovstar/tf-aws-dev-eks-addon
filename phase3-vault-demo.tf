@@ -31,8 +31,8 @@ resource "kubernetes_manifest" "demo_certificate" {
         "${var.demo_app_name}.${local.effective_base_domain}",
         "${var.demo_app_name}.demo.svc.cluster.local"
       ]
-      duration    = "24h"
-      renewBefore = "8h"
+      duration    = "1h"
+      renewBefore = "50m"
       privateKey = {
         algorithm      = "RSA"
         size           = 2048
@@ -58,6 +58,22 @@ resource "kubernetes_manifest" "demo_certificate" {
   ]
 }
 
+# HTML content for SSL monitoring website
+resource "kubernetes_config_map" "nginx_html" {
+  count = var.install_vault_integration ? 1 : 0
+
+  metadata {
+    name      = "nginx-html"
+    namespace = "demo"
+  }
+
+  data = {
+    "index.html" = file("${path.module}/ssl-monitor.html")
+  }
+
+  depends_on = [kubernetes_namespace.demo]
+}
+
 # NGINX Configuration with TLS
 resource "kubernetes_config_map" "nginx_config" {
   count = var.install_vault_integration ? 1 : 0
@@ -81,11 +97,52 @@ resource "kubernetes_config_map" "nginx_config" {
           ssl_protocols TLSv1.2 TLSv1.3;
           ssl_ciphers HIGH:!aNULL:!MD5;
           
+          # Force HTTPS redirect
+          if ($scheme = http) {
+              return 301 https://$server_name$request_uri;
+          }
+          
           location / {
               root   /usr/share/nginx/html;
               index  index.html index.htm;
               add_header X-Certificate-Source "HashiCorp Vault via cert-manager" always;
               add_header X-Certificate-Issuer "vault-issuer" always;
+              add_header X-Cert-Serial "$ssl_client_serial" always;
+              add_header X-Cert-Subject "$ssl_client_s_dn" always;
+          }
+          
+          location /api/cert-info {
+              add_header Content-Type "application/json" always;
+              return 200 '{
+                  "certificate": {
+                      "subject": "$ssl_client_s_dn",
+                      "issuer": "$ssl_client_i_dn",
+                      "serial": "$ssl_client_serial",
+                      "valid_from": "$ssl_client_v_start",
+                      "valid_until": "$ssl_client_v_end",
+                      "fingerprint": "$ssl_client_fingerprint"
+                  },
+                  "server": {
+                      "hostname": "$hostname",
+                      "timestamp": "$time_iso8601"
+                  }
+              }';
+          }
+          
+          location /api/renew-cert {
+              if ($request_method = POST) {
+                  # Proxy to the renewal sidecar service
+                  proxy_pass http://127.0.0.1:8080/api/renew-cert;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_connect_timeout 30s;
+                  proxy_send_timeout 30s;
+                  proxy_read_timeout 30s;
+              }
+              if ($request_method != POST) {
+                  add_header Content-Type "application/json" always;
+                  return 405 '{"error": "Method not allowed. Use POST."}';
+              }
           }
           
           location /health {
@@ -105,10 +162,10 @@ resource "kubernetes_deployment" "nginx_demo" {
   count = var.install_vault_integration ? 1 : 0
 
   metadata {
-    name      = var.demo_app_name
+    name      = replace(var.demo_app_name, "\"", "")
     namespace = "demo"
     labels = {
-      app = var.demo_app_name
+      app = replace(var.demo_app_name, "\"", "")
     }
   }
 
@@ -117,18 +174,20 @@ resource "kubernetes_deployment" "nginx_demo" {
 
     selector {
       match_labels = {
-        app = var.demo_app_name
+        app = replace(var.demo_app_name, "\"", "")
       }
     }
 
     template {
       metadata {
         labels = {
-          app = var.demo_app_name
+          app = replace(var.demo_app_name, "\"", "")
         }
       }
 
       spec {
+        service_account_name = var.install_vault_integration ? kubernetes_service_account.cert_renewal[0].metadata[0].name : "default"
+        
         container {
           image = "nginx:alpine"
           name  = "nginx"
@@ -155,14 +214,61 @@ resource "kubernetes_deployment" "nginx_demo" {
             read_only  = true
           }
 
+          volume_mount {
+            name       = "nginx-html"
+            mount_path = "/usr/share/nginx/html"
+            read_only  = true
+          }
+
           resources {
             requests = {
-              memory = "64Mi"
-              cpu    = "100m"
+              memory = "64Mi"   # Minimum memory required
+              cpu    = "100m"   # Minimum CPU required for HPA
             }
             limits = {
-              memory = "128Mi"
-              cpu    = "200m"
+              memory = "256Mi"  # Maximum memory allowed (increased for scaling)
+              cpu    = "500m"   # Maximum CPU allowed (increased for scaling)
+            }
+          }
+        }
+        
+        # Certificate renewal sidecar container (only when vault integration is enabled)
+        dynamic "container" {
+          for_each = var.install_vault_integration ? [1] : []
+          content {
+            image = "alpine:latest"
+            name  = "cert-renewal-sidecar"
+            
+            command = ["/bin/sh", "-c"]
+            args = [
+              "apk add --no-cache curl jq bash python3 py3-pip && pip install --no-cache-dir requests && python3 /scripts/server.py"
+            ]
+
+            port {
+              container_port = 8080
+              name          = "renewal-api"
+            }
+
+            volume_mount {
+              name       = "renewal-scripts"
+              mount_path = "/scripts"
+              read_only  = true
+            }
+
+            resources {
+              requests = {
+                memory = "32Mi"
+                cpu    = "50m"
+              }
+              limits = {
+                memory = "128Mi"
+                cpu    = "200m"
+              }
+            }
+
+            env {
+              name = "PYTHONUNBUFFERED"
+              value = "1"
             }
           }
         }
@@ -180,6 +286,25 @@ resource "kubernetes_deployment" "nginx_demo" {
             name = "nginx-config"
           }
         }
+
+        volume {
+          name = "nginx-html"
+          config_map {
+            name = "nginx-html"
+          }
+        }
+        
+        # Renewal scripts volume (only when vault integration is enabled)
+        dynamic "volume" {
+          for_each = var.install_vault_integration ? [1] : []
+          content {
+            name = "renewal-scripts"
+            config_map {
+              name = kubernetes_config_map.cert_renewal_script[0].metadata[0].name
+              default_mode = "0755"
+            }
+          }
+        }
       }
     }
   }
@@ -187,7 +312,11 @@ resource "kubernetes_deployment" "nginx_demo" {
   depends_on = [
     kubernetes_namespace.demo,
     kubernetes_manifest.demo_certificate,
-    kubernetes_config_map.nginx_config
+    kubernetes_config_map.nginx_config,
+    kubernetes_config_map.nginx_html,
+    kubernetes_config_map.cert_renewal_script,
+    kubernetes_service_account.cert_renewal,
+    kubernetes_cluster_role_binding.cert_renewal
   ]
 }
 
@@ -196,10 +325,10 @@ resource "kubernetes_service" "nginx_demo" {
   count = var.install_vault_integration ? 1 : 0
 
   metadata {
-    name      = var.demo_app_name
+    name      = replace(var.demo_app_name, "\"", "")
     namespace = "demo"
     labels = {
-      app = var.demo_app_name
+      app = replace(var.demo_app_name, "\"", "")
     }
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
@@ -211,7 +340,7 @@ resource "kubernetes_service" "nginx_demo" {
     type = "LoadBalancer"
 
     selector = {
-      app = var.demo_app_name
+      app = replace(var.demo_app_name, "\"", "")
     }
 
     port {

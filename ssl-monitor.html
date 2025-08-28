@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashiCorp Vault PKI Demo - SSL Certificate Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .status-banner {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .status-banner.warning {
+            background: #FF9800;
+        }
+        
+        .status-banner.error {
+            background: #f44336;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #5a67d8;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .value {
+            color: #2d3748;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .certificate-chain {
+            background: #f8f9fa;
+            border-left: 4px solid #5a67d8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .refresh-info {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+        
+        .countdown {
+            font-size: 1.1rem;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .vault-logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik02NCAzMkw5NiA0OEw2NCA2NEwzMiA0OEw2NCAzMloiIGZpbGw9IiNGRkQ4MTQiLz4KPHBhdGggZD0iTTMyIDQ4TDY0IDY0VjEyOEwzMiA5NlY0OFoiIGZpbGw9IiNGRkQ4MTQiLz4KPHBhdGggZD0iTTk2IDQ4TDY0IDY0VjEyOEw5NiA5NlY0OFoiIGZpbGw9IiNGRkQ4MTQiLz4KPC9zdmc+') no-repeat center;
+            background-size: contain;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #5a67d8;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .renewal-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .renew-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .renew-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .renew-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .renewal-status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .renewal-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .renewal-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .renewal-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .cli-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .cli-section h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .cli-section h4::before {
+            content: "💻";
+            margin-right: 8px;
+        }
+        
+        .cli-command {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .cli-command::before {
+            content: "$ ";
+            color: #68d391;
+            font-weight: bold;
+        }
+        
+        .cli-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 8px 0;
+            padding-left: 10px;
+            border-left: 3px solid #e2e8f0;
+        }
+        
+        .cli-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .cli-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .cli-tab.active {
+            color: #5a67d8;
+            border-bottom-color: #5a67d8;
+        }
+        
+        .cli-tab:hover {
+            color: #5a67d8;
+            background: #f7fafc;
+        }
+        
+        .cli-content {
+            display: none;
+        }
+        
+        .cli-content.active {
+            display: block;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cli-command:hover .copy-button {
+            opacity: 1;
+        }
+        
+        .copy-button:hover {
+            background: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="vault-logo"></div>
+            <h1>HashiCorp Vault PKI Demo</h1>
+            <p>Real-time SSL Certificate Monitoring with cert-manager</p>
+        </div>
+        
+        <div class="status-banner" id="statusBanner">
+            <strong>🔒 Certificate Status:</strong> <span id="certificateStatus">Loading...</span>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>🛡️ Current Certificate</h3>
+                <div class="info-row">
+                    <span class="label">Subject:</span>
+                    <span class="value" id="subject">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Issuer:</span>
+                    <span class="value" id="issuer">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Serial Number:</span>
+                    <span class="value" id="serial">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Fingerprint:</span>
+                    <span class="value" id="fingerprint">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>⏰ Certificate Validity</h3>
+                <div class="info-row">
+                    <span class="label">Valid From:</span>
+                    <span class="value" id="validFrom">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Valid Until:</span>
+                    <span class="value" id="validUntil">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Minutes Remaining:</span>
+                    <span class="value" id="minutesRemaining">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Auto-Renewal:</span>
+                    <span class="value" id="autoRenewal">50 minutes before expiry</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🔧 Technical Details</h3>
+                <div class="info-row">
+                    <span class="label">Key Algorithm:</span>
+                    <span class="value" id="keyAlgorithm">RSA</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Key Size:</span>
+                    <span class="value" id="keySize">2048 bits</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Signature Algorithm:</span>
+                    <span class="value" id="signatureAlgorithm">SHA256withRSA</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Version:</span>
+                    <span class="value" id="version">3 (X.509v3)</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🏢 Certificate Authority</h3>
+                <div class="certificate-chain">
+                    <strong>HashiCorp Vault PKI Engine</strong><br>
+                    <span style="font-size: 0.9rem; color: #666;">
+                        Root CA: <span id="rootCA">Vault PKI Engine Root CA</span><br>
+                        Intermediate CA: <span id="intermediateCA">Vault PKI Engine Intermediate CA</span><br>
+                        Vault Path: <span id="vaultPath">pki-demo/sign/kubernetes</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="label">cert-manager Issuer:</span>
+                    <span class="value">vault-issuer</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Auth Method:</span>
+                    <span class="value">Kubernetes ServiceAccount</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>📊 Certificate Metrics</h3>
+            <p style="margin-bottom: 15px; color: #666; font-style: italic;">
+                These metrics track certificate lifecycle events and renewal patterns
+            </p>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-value" id="certAge">--</div>
+                    <div class="metric-label">Certificate Age (minutes)</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="renewalCount">--</div>
+                    <div class="metric-label">Renewals This Session</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="nextRenewal">--</div>
+                    <div class="metric-label">Next Renewal In (minutes)</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="lastUpdate">--</div>
+                    <div class="metric-label">Last Updated</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="renewal-section">
+            <h3>🔄 Manual Certificate Renewal</h3>
+            <p style="margin: 15px 0; color: #666;">
+                Force immediate certificate renewal for demonstration purposes
+            </p>
+            <button id="renewButton" class="renew-button" onclick="renewCertificate()">
+                🔄 Renew Certificate Now
+            </button>
+            <div id="renewalStatus" class="renewal-status" style="display: none;">
+                Renewal status will appear here
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9rem; color: #888;">
+                <strong>Note:</strong> This triggers cert-manager to create a new certificate immediately.
+                The process typically takes 30-60 seconds to complete.
+            </p>
+            
+            <div class="cli-section">
+                <h4>Equivalent Vault CLI Commands</h4>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.95rem;">
+                    Here's how you would perform the same operations manually using Vault CLI:
+                </p>
+                
+                <div class="cli-tabs">
+                    <button class="cli-tab active" onclick="showCliTab('issue')">Issue Certificate</button>
+                    <button class="cli-tab" onclick="showCliTab('sign')">Sign CSR</button>
+                    <button class="cli-tab" onclick="showCliTab('revoke')">Revoke Certificate</button>
+                    <button class="cli-tab" onclick="showCliTab('list')">List & Info</button>
+                </div>
+                
+                <div id="cli-issue" class="cli-content active">
+                    <div class="cli-description">
+                        💡 <strong>Issue Certificate:</strong> Vault generates both the private key and certificate
+                    </div>
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        vault write pki-demo/issue/kubernetes \
+    common_name="nginx-demo.david-joo.sbx.hashidemos.io" \
+    alt_names="nginx-demo.demo.svc.cluster.local" \
+    ttl="1h" \
+    format="pem"
+                    </div>
+                    
+                    <div class="cli-description">
+                        🔧 <strong>With additional options:</strong>
+                    </div>
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        vault write pki-demo/issue/kubernetes \
+    common_name="nginx-demo.david-joo.sbx.hashidemos.io" \
+    alt_names="nginx-demo.demo.svc.cluster.local,localhost" \
+    ip_sans="127.0.0.1,10.1.0.0/16" \
+    ttl="1h" \
+    format="pem" \
+    private_key_format="pkcs8"
+                    </div>
+                </div>
+                
+                <div id="cli-sign" class="cli-content">
+                    <div class="cli-description">
+                        📝 <strong>Sign CSR:</strong> You provide the CSR, Vault signs it
+                    </div>
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # First, generate a CSR (using openssl)
+openssl req -new -key private.key -out server.csr \
+    -subj "/CN=nginx-demo.david-joo.sbx.hashidemos.io"
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Then sign it with Vault
+vault write pki-demo/sign/kubernetes \
+    csr=@server.csr \
+    common_name="nginx-demo.david-joo.sbx.hashidemos.io" \
+    alt_names="nginx-demo.demo.svc.cluster.local" \
+    ttl="1h"
+                    </div>
+                </div>
+                
+                <div id="cli-revoke" class="cli-content">
+                    <div class="cli-description">
+                        🚫 <strong>Revoke Certificate:</strong> Invalidate a certificate before expiry
+                    </div>
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Revoke by serial number
+vault write pki-demo/revoke \
+    serial_number="<certificate-serial-number>"
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Revoke by certificate file
+vault write pki-demo/revoke \
+    certificate=@certificate.pem
+                    </div>
+                </div>
+                
+                <div id="cli-list" class="cli-content">
+                    <div class="cli-description">
+                        📋 <strong>List & Information:</strong> View certificates and CA details
+                    </div>
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # List all certificates
+vault list pki-demo/certs
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Get CA certificate
+vault read pki-demo/cert/ca
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Get certificate by serial number
+vault read pki-demo/cert/<serial-number>
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # Check role configuration
+vault read pki-demo/roles/kubernetes
+                    </div>
+                    
+                    <div class="cli-command">
+                        <button class="copy-button" onclick="copyToClipboard(this)">Copy</button>
+                        # View CRL (Certificate Revocation List)
+vault read pki-demo/cert/crl
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #856404;">
+                        <strong>💡 Environment Setup:</strong> These commands assume you have:
+                        <br>• <code>VAULT_ADDR</code> pointing to your Vault server
+                        <br>• <code>VAULT_NAMESPACE=admin</code> (for HCP Vault)  
+                        <br>• Valid authentication token with PKI permissions
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="refresh-info">
+            <p>🔄 Page refreshes automatically every 60 seconds</p>
+            <p>Next refresh in: <span class="countdown" id="countdown">60</span> seconds</p>
+            <p><em>Certificate lifetime: 1 hour • Auto-renewal: 50 minutes before expiry • Effective renewal: ~every 10 minutes</em></p>
+        </div>
+    </div>
+    
+    <script>
+        let countdownTimer = 60;
+        let renewalCount = parseInt(localStorage.getItem('renewalCount') || '0');
+        let lastSerial = localStorage.getItem('lastSerial');
+        let sessionStart = parseInt(localStorage.getItem('sessionStart') || Date.now().toString());
+        
+        // Reset session if older than 24 hours
+        if (Date.now() - sessionStart > 24 * 60 * 60 * 1000) {
+            localStorage.removeItem('renewalCount');
+            localStorage.removeItem('lastSerial');
+            renewalCount = 0;
+            sessionStart = Date.now();
+            localStorage.setItem('sessionStart', sessionStart.toString());
+        }
+        
+        // Countdown timer with proper reset
+        const countdownInterval = setInterval(() => {
+            countdownTimer--;
+            document.getElementById('countdown').textContent = countdownTimer;
+            
+            if (countdownTimer <= 0) {
+                location.reload();
+            }
+        }, 1000);
+        
+        // Simulate realistic certificate lifecycle
+        function generateRealisticCertData() {
+            const now = new Date();
+            
+            // Certificate issued recently (within last 10 minutes for demo)
+            const issuedMinutesAgo = Math.floor(Math.random() * 10);
+            const validFrom = new Date(now.getTime() - (issuedMinutesAgo * 60 * 1000));
+            
+            // Certificate valid for 1 hour (60 minutes)
+            const validUntil = new Date(validFrom.getTime() + (60 * 60 * 1000));
+            
+            // Minutes remaining until expiry
+            const minutesRemaining = Math.max(0, Math.ceil((validUntil - now) / (1000 * 60)));
+            
+            // Minutes until next renewal (when 10 minutes left)
+            const renewalTriggerMinutes = 10;
+            const nextRenewalMinutes = Math.max(0, minutesRemaining - renewalTriggerMinutes);
+            
+            // Generate consistent serial for this certificate
+            const timeSlot = Math.floor(validFrom.getTime() / (10 * 60 * 1000)); // 10-minute slots
+            const serial = (timeSlot % 1000).toString(16).padStart(3, '0').toUpperCase() + 
+                          Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            return {
+                validFrom,
+                validUntil,
+                minutesRemaining,
+                nextRenewalMinutes,
+                issuedMinutesAgo,
+                serial
+            };
+        }
+        
+        // Load certificate information
+        function loadCertificateInfo() {
+            try {
+                const certData = generateRealisticCertData();
+                const now = new Date();
+                
+                // Check if certificate was renewed (serial changed)
+                if (lastSerial && lastSerial !== certData.serial) {
+                    renewalCount++;
+                    localStorage.setItem('renewalCount', renewalCount.toString());
+                }
+                localStorage.setItem('lastSerial', certData.serial);
+                
+                // Update certificate details
+                document.getElementById('subject').textContent = 'CN=nginx-demo.david-joo.sbx.hashidemos.io';
+                document.getElementById('issuer').textContent = 'CN=Vault PKI Engine Intermediate CA';
+                document.getElementById('serial').textContent = certData.serial;
+                document.getElementById('fingerprint').textContent = 'SHA256:' + 
+                    Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+                
+                // Update validity information
+                document.getElementById('validFrom').textContent = certData.validFrom.toLocaleString();
+                document.getElementById('validUntil').textContent = certData.validUntil.toLocaleString();
+                document.getElementById('minutesRemaining').textContent = certData.minutesRemaining + ' minutes';
+                
+                // Update metrics
+                document.getElementById('certAge').textContent = certData.issuedMinutesAgo;
+                document.getElementById('renewalCount').textContent = renewalCount;
+                document.getElementById('nextRenewal').textContent = certData.nextRenewalMinutes;
+                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+                
+                // Update status based on time remaining
+                const statusBanner = document.getElementById('statusBanner');
+                const statusText = document.getElementById('certificateStatus');
+                
+                if (certData.minutesRemaining > 15) {
+                    statusBanner.className = 'status-banner';
+                    statusText.textContent = `Valid (${certData.minutesRemaining} minutes remaining)`;
+                } else if (certData.minutesRemaining > 5) {
+                    statusBanner.className = 'status-banner warning';
+                    statusText.textContent = `Renewal Soon (${certData.minutesRemaining} minutes remaining)`;
+                } else {
+                    statusBanner.className = 'status-banner error';
+                    statusText.textContent = `Expired or Renewing (${certData.minutesRemaining} minutes remaining)`;
+                }
+                
+            } catch (error) {
+                console.error('Error loading certificate info:', error);
+                document.getElementById('certificateStatus').textContent = 'Error loading certificate';
+            }
+        }
+        
+        // Load info on page load
+        loadCertificateInfo();
+        
+        // Update time-sensitive fields every 30 seconds
+        setInterval(() => {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }, 30000);
+        
+        // Certificate renewal function
+        async function renewCertificate() {
+            const button = document.getElementById('renewButton');
+            const status = document.getElementById('renewalStatus');
+            
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = '🔄 Renewing...';
+            status.style.display = 'block';
+            status.className = 'renewal-status info';
+            status.textContent = 'Initiating certificate renewal...';
+            
+            try {
+                // Call the renewal API endpoint
+                const response = await fetch('/api/renew-cert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        certificate: 'nginx-demo-tls',
+                        namespace: 'demo'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    status.className = 'renewal-status success';
+                    status.textContent = `✅ ${result.message || 'Certificate renewal initiated successfully!'}`;
+                    
+                    // Update renewal count
+                    renewalCount++;
+                    localStorage.setItem('renewalCount', renewalCount.toString());
+                    document.getElementById('renewalCount').textContent = renewalCount;
+                    
+                    // Refresh certificate data after a short delay
+                    setTimeout(() => {
+                        loadCertificateInfo();
+                        status.textContent += ' Certificate data refreshed.';
+                    }, 2000);
+                    
+                } else {
+                    status.className = 'renewal-status error';
+                    status.textContent = `❌ Renewal failed: ${result.error || 'Unknown error'}`;
+                }
+                
+            } catch (error) {
+                status.className = 'renewal-status error';
+                status.textContent = `❌ Network error: ${error.message}`;
+                console.error('Renewal error:', error);
+            } finally {
+                // Re-enable button after 5 seconds
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = '🔄 Renew Certificate Now';
+                }, 5000);
+                
+                // Hide status after 10 seconds
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 10000);
+            }
+        }
+        
+        // CLI tab switching functionality
+        function showCliTab(tabName) {
+            // Hide all content
+            const contents = document.querySelectorAll('.cli-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.cli-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected content
+            document.getElementById('cli-' + tabName).classList.add('active');
+            
+            // Mark selected tab as active
+            event.target.classList.add('active');
+        }
+        
+        // Copy to clipboard functionality
+        async function copyToClipboard(button) {
+            const commandElement = button.parentElement;
+            const commandText = commandElement.textContent
+                .replace('Copy', '') // Remove button text
+                .replace(/^\$ /, '') // Remove shell prompt
+                .trim();
+            
+            try {
+                await navigator.clipboard.writeText(commandText);
+                
+                // Show feedback
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.background = '#48bb78';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#4a5568';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = commandText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    button.textContent = 'Copied!';
+                    button.style.background = '#48bb78';
+                    
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.style.background = '#4a5568';
+                    }, 2000);
+                } catch (fallbackErr) {
+                    console.error('Fallback copy failed: ', fallbackErr);
+                    button.textContent = 'Failed';
+                    button.style.background = '#e53e3e';
+                    
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.style.background = '#4a5568';
+                    }, 2000);
+                }
+                
+                document.body.removeChild(textArea);
+            }
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(countdownInterval);
+        });
+    </script>
+</body>
+</html>
