@@ -32,7 +32,7 @@ variable "vault_pki_role" {
 # Note: Using Kubernetes auth method for cert-manager ServiceAccount
 # The cert-manager ServiceAccount will authenticate directly to Vault using K8s JWT
 
-# Vault ClusterIssuer for cert-manager
+# Vault ClusterIssuer for cert-manager using Kubernetes auth
 resource "kubernetes_manifest" "vault_cluster_issuer" {
   count = var.install_vault_integration && var.vault_addr != "" ? 1 : 0
 
@@ -41,6 +41,9 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
     kind       = "ClusterIssuer"
     metadata = {
       name = "vault-issuer"
+      labels = {
+        "app.kubernetes.io/managed-by" = "terraform"
+      }
     }
     spec = {
       vault = {
