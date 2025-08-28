@@ -118,47 +118,32 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "nginx_demo_hpa" {
   ]
 }
 
-# Vertical Pod Autoscaler (VPA) - Optional recommendation engine
-resource "kubernetes_manifest" "nginx_demo_vpa" {
-  count = var.install_vault_integration && var.install_cluster_autoscaler ? 1 : 0
+# Note: Vertical Pod Autoscaler (VPA) disabled - requires VPA CRDs to be installed first
+# To enable VPA:
+# 1. Install VPA: kubectl apply -f https://github.com/kubernetes/autoscaler/releases/download/vertical-pod-autoscaler-0.13.0/vpa-release-0.13.0-yaml.tar.gz  
+# 2. Uncomment the VPA resource below
 
-  manifest = {
-    apiVersion = "autoscaling.k8s.io/v1"
-    kind       = "VerticalPodAutoscaler"
-    metadata = {
-      name      = "${var.demo_app_name}-vpa"
-      namespace = "demo"
-    }
-    spec = {
-      targetRef = {
-        apiVersion = "apps/v1"
-        kind       = "Deployment"
-        name       = var.demo_app_name
-      }
-      updatePolicy = {
-        updateMode = "Off"  # Recommendation only, don't auto-update
-      }
-      resourcePolicy = {
-        containerPolicies = [
-          {
-            containerName = "nginx"
-            minAllowed = {
-              cpu    = "50m"
-              memory = "32Mi"
-            }
-            maxAllowed = {
-              cpu    = "500m"
-              memory = "256Mi"
-            }
-            controlledResources = ["cpu", "memory"]
-          }
-        ]
-      }
-    }
-  }
-
-  depends_on = [kubernetes_deployment.nginx_demo]
-}
+# resource "kubernetes_manifest" "nginx_demo_vpa" {
+#   count = var.install_vault_integration && var.install_cluster_autoscaler ? 1 : 0
+#   manifest = {
+#     apiVersion = "autoscaling.k8s.io/v1"
+#     kind       = "VerticalPodAutoscaler" 
+#     metadata = {
+#       name      = "${var.demo_app_name}-vpa"
+#       namespace = "demo"
+#     }
+#     spec = {
+#       targetRef = {
+#         apiVersion = "apps/v1"
+#         kind       = "Deployment"
+#         name       = var.demo_app_name
+#       }
+#       updatePolicy = {
+#         updateMode = "Off"  # Recommendation only
+#       }
+#     }
+#   }
+# }
 
 # Output HPA information
 output "hpa_status" {

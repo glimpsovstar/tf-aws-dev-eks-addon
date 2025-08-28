@@ -3,7 +3,7 @@
 
 # DNS records from app_names + base_domain (preferred method)
 resource "aws_route53_record" "app_name_records" {
-  for_each = var.app_names
+  for_each = local.effective_app_names
   
   zone_id = local.route53_zone_id
   name    = "${each.key}.${local.effective_base_domain}"

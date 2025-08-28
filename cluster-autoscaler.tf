@@ -27,12 +27,12 @@ resource "aws_iam_role" "cluster_autoscaler" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Effect = "Allow"
         Principal = {
-          Federated = data.terraform_remote_state.eks_foundation.outputs.cluster_oidc_issuer_arn
+          Federated = data.terraform_remote_state.eks_foundation.outputs.oidc_provider_arn
         }
         Condition = {
           StringEquals = {
-            "${replace(data.terraform_remote_state.eks_foundation.outputs.cluster_oidc_issuer_url, "https://", "")}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
-            "${replace(data.terraform_remote_state.eks_foundation.outputs.cluster_oidc_issuer_url, "https://", "")}:aud" = "sts.amazonaws.com"
+            "${replace(data.terraform_remote_state.eks_foundation.outputs.oidc_provider_arn, "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/", "")}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
+            "${replace(data.terraform_remote_state.eks_foundation.outputs.oidc_provider_arn, "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/", "")}:aud" = "sts.amazonaws.com"
           }
         }
       }
