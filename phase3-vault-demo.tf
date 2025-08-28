@@ -163,7 +163,7 @@ resource "kubernetes_config_map" "nginx_config" {
 
 # NGINX Demo Deployment
 resource "kubernetes_deployment" "nginx_demo" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name      = replace(var.demo_app_name, "\"", "")
@@ -340,7 +340,7 @@ resource "kubernetes_deployment" "nginx_demo" {
 
 # Service for demo application (LoadBalancer for direct access)
 resource "kubernetes_service" "nginx_demo" {
-  count = var.install_vault_integration ? 1 : 0
+  count = var.install_vault_integration && var.manage_existing_resources ? 1 : 0
 
   metadata {
     name      = replace(var.demo_app_name, "\"", "")

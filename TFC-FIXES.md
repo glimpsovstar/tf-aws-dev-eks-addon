@@ -19,7 +19,7 @@
 
 ### 4. Nginx Deployment Timeout
 - **Problem**: `kubernetes_deployment.nginx_demo[0]` timing out during TFC apply
-- **Fix**: Added lifecycle management, rolling update strategy, and progress deadline
+- **Fix**: Made deployment and service conditional on `manage_existing_resources` to avoid conflicts
 - **File**: `phase3-vault-demo.tf`
 
 ## Manual Steps Required After TFC Apply
@@ -64,6 +64,8 @@ kubectl scale deployment nginx-demo --replicas=2 -n demo
 ❌ **Will skip** these problematic resources:
 - `helm_release.metrics_server[0]` - Removed to avoid timeout
 - `aws_route53_record.app_name_records["nginx-demo"]` - Conditional creation
+- `kubernetes_deployment.nginx_demo[0]` - Conditional creation (existing deployment remains)
+- `kubernetes_service.nginx_demo[0]` - Conditional creation (existing service remains)
 
 ## Website Status
 
