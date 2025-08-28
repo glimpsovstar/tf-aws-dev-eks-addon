@@ -59,7 +59,7 @@ resource "kubernetes_manifest" "vault_cluster_issuer" {
         namespace = var.vault_namespace
         auth = {
           kubernetes = {
-            mountPath = var.vault_k8s_auth_path
+            mountPath = "auth/${var.vault_k8s_auth_path}"
             role      = "cert-manager"
             serviceAccountRef = {
               name = "cert-manager"
