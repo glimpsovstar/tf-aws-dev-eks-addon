@@ -250,6 +250,7 @@ resource "kubernetes_ingress_v1" "nginx_demo" {
       "nginx.ingress.kubernetes.io/ssl-redirect"       = "true"
       "nginx.ingress.kubernetes.io/force-ssl-redirect" = "true"
       "cert-manager.io/cluster-issuer"                 = "vault-issuer"
+      "cert-manager.io/common-name"                    = "${var.demo_app_name}.${local.effective_base_domain}"
     }
   }
 
