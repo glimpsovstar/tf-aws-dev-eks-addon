@@ -53,20 +53,15 @@ resource "kubernetes_config_map" "nginx_config" {
               index  index.html index.htm;
               add_header X-Certificate-Source "HashiCorp Vault via cert-manager" always;
               add_header X-Certificate-Issuer "vault-issuer" always;
-              add_header X-Cert-Serial "$ssl_client_serial" always;
-              add_header X-Cert-Subject "$ssl_client_s_dn" always;
           }
           
           location /api/cert-info {
               add_header Content-Type "application/json" always;
               return 200 '{
                   "certificate": {
-                      "subject": "$ssl_client_s_dn",
-                      "issuer": "$ssl_client_i_dn",
-                      "serial": "$ssl_client_serial",
-                      "valid_from": "$ssl_client_v_start",
-                      "valid_until": "$ssl_client_v_end",
-                      "fingerprint": "$ssl_client_fingerprint"
+                      "source": "HashiCorp Vault via cert-manager",
+                      "issuer": "vault-issuer",
+                      "note": "Certificate details available via Ingress termination"
                   },
                   "server": {
                       "hostname": "$hostname",
